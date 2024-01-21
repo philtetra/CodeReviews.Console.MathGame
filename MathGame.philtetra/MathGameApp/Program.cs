@@ -7,18 +7,20 @@ var division = new MathOperation(MathOperationOption.Division);
 var randomOperation = new MathOperation(MathOperationOption.Random);
 
 List<string> examplesHistory = new(32);
+FillHistoryWithSampleData(200);
 ConsoleKeyInfo keyInfo;
 do
 {
 	Console.Clear();
 	Console.WriteLine("Math Game\n==============");
-
+	
 	for (int i = 1; i <= Enum.GetNames(typeof(MathOperationOption)).Length; i++)
 	{
-        Console.WriteLine($"{i}. {Enum.GetName(typeof(MathOperationOption), i)}");
+		Console.WriteLine($"{i}. {Enum.GetName(typeof(MathOperationOption), i)}");
 	}
 	Console.WriteLine("\n6. View history");
 	Console.WriteLine("\n0. Quit");
+	//Console.WriteLine($"Buffer - width: {Console.BufferWidth}, height: {Console.BufferHeight}");
 
 	Console.CursorVisible = false;
 	keyInfo = Console.ReadKey(true);
@@ -61,7 +63,7 @@ void DisplayOption(MathOperation operation)
 			operation.GenerateNext();
 		}
 
-		string example = $"{operation.a} {operation.OperationSign} {operation.b} = ";
+		string example = $"{operation.OperandA} {operation.Operator} {operation.OperandB} = ";
 		Console.Write(example);
 
 		answer = Console.ReadLine();
@@ -90,22 +92,42 @@ void DisplayOption(MathOperation operation)
 
 void ViewHistory()
 {
-	Console.CursorVisible= false;
-	int top = 0;
-	Console.SetCursorPosition(Console.WindowWidth / 2, top++);
-    Console.WriteLine("History");
-	Console.SetCursorPosition(Console.WindowWidth / 2, top++);
-    Console.WriteLine("=======");
+	Console.CursorVisible = false;
+	Console.SetCursorPosition(Console.WindowWidth / 2, 0);
+	Console.WriteLine("History");
+	Console.CursorLeft = Console.WindowWidth / 2;
+	Console.WriteLine("=======");
 
+	int counter = 0, indents = 1;
+	const int columnWidth = 24;
 	foreach (string record in examplesHistory)
 	{
-		Console.SetCursorPosition(Console.WindowWidth / 2, top++);
+		if (++counter + 2 >= Console.BufferHeight)
+		{
+			Console.CursorTop = 2;
+			counter = 1;
+			indents++;
+		}
+		if (columnWidth * indents >= Console.BufferWidth)
+		{
+			break;
+		}
+		Console.CursorLeft = columnWidth * indents;
 		Console.WriteLine(record);
 	}
 	Console.ReadKey();
 
 	Console.CursorVisible = true;
 	Console.SetCursorPosition(0, 0);
+}
+
+void FillHistoryWithSampleData(int count)
+{
+	string sample = "33 * 100 = 3300";
+	for (int i = 0; i < count; i++)
+	{
+		examplesHistory.Add(sample);
+	}
 }
 
 //static bool IsMenuOption(ConsoleKeyInfo keyInfo)

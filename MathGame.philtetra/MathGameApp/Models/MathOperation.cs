@@ -3,36 +3,42 @@ class MathOperation
 {
 	public bool Answered { get; private set; }
 	private Func<int, int, int> operation;
-	public char OperationSign;
-	public int a, b;
-	public int result;
-	private Random rand;
+	public char Operator { get; private set; }
+	public int OperandA { get; private set; }
+	public int OperandB { get; private set; }
+	private int result;
+	private readonly Random rand;
 	public readonly MathOperationOption SelectedOption;
+	private readonly List<int> primes = new()
+	{
+		2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
+	};
 
 	public MathOperation(MathOperationOption option)
 	{
 		rand = new Random(42);
 
-		switch (option)
+		this.SelectedOption = option;
+		switch (this.SelectedOption)
 		{
 			case MathOperationOption.Addition:
-				this.operation = Sum;
-				this.OperationSign = '+';
+				this.operation = operationsDict[Function.Sum];
+				this.Operator = operatorsDict[Function.Sum];
 				break;
 
 			case MathOperationOption.Subtraction:
-				this.operation = Difference;
-				this.OperationSign = '-';
+				this.operation = operationsDict[Function.Difference];
+				this.Operator = operatorsDict[Function.Difference];
 				break;
 
 			case MathOperationOption.Multiplication:
-				this.operation = Product;
-				this.OperationSign = '*';
+				this.operation = operationsDict[Function.Product];
+				this.Operator = operatorsDict[Function.Product];
 				break;
 
 			case MathOperationOption.Division:
-				this.operation = Quotient;
-				this.OperationSign = '/';
+				this.operation = operationsDict[Function.Quotient];
+				this.Operator = operatorsDict[Function.Quotient];
 				break;
 
 			case MathOperationOption.Random:
@@ -59,15 +65,34 @@ class MathOperation
 		}
 
 		this.Answered = false;
-		this.a = rand.Next(0, 101);
-		this.b = rand.Next(0, 101);
-		this.result = this.operation(this.a, this.b);
+		this.OperandA = rand.Next(0, 101);
+		this.OperandB = rand.Next(1, 101);
+		if (this.SelectedOption == MathOperationOption.Division)
+		{
+			if (primes.Contains(this.OperandA))
+			{
+				this.OperandB = rand.Next(2) switch
+				{
+					0 => this.OperandA,
+					_ => 1
+				};
+			}
+			else
+			{
+				while (this.OperandA % this.OperandB != 0)
+				{
+					this.OperandB = rand.Next(1, 101);
+				}
+			}
+		}
+		this.result = this.operation(this.OperandA, this.OperandB);
 	}
 
 	private void SetRandomOperation()
 	{
 		int index = rand.Next(0, operationsDict.Count);
 		this.operation = operationsDict.ElementAt(index).Value;
+		this.Operator = operatorsDict.ElementAt(index).Value;
 	}
 
 	private static readonly Dictionary<Function, Func<int, int, int>> operationsDict = new()
@@ -77,6 +102,13 @@ class MathOperation
 		[Function.Product] = Product,
 		[Function.Quotient] = Quotient
 	};
+	private static readonly Dictionary<Function, char> operatorsDict = new()
+	{
+		[Function.Sum] = '+',
+		[Function.Difference] = '-',
+		[Function.Product] = '*',
+		[Function.Quotient] = '/'
+	};
 	private static int Sum(int a, int b) => a + b;
 	private static int Difference(int a, int b) => a - b;
 	private static int Product(int a, int b) => a * b;
@@ -84,9 +116,9 @@ class MathOperation
 
 	private enum Function
 	{
-		Sum,
-		Difference,
-		Product,
-		Quotient
+		Sum = 1,
+		Difference = 2,
+		Product = 3,
+		Quotient = 4
 	}
 }
