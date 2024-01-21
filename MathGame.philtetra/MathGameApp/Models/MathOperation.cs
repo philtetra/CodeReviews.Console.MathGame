@@ -1,21 +1,24 @@
 ﻿namespace MathGameApp.Models;
-class MathOperation
+public class MathOperation
 {
+	private Func<int, int, int>? operation;
 	public bool Answered { get; private set; }
-	private Func<int, int, int> operation;
 	public char Operator { get; private set; }
 	public int OperandA { get; private set; }
 	public int OperandB { get; private set; }
 	private int result;
 	private readonly Random rand;
+	public int RandomUpperLimit;
 	public readonly MathOperationOption SelectedOption;
-	private readonly List<int> primes = new()
+	private readonly static List<int> primes = new()
 	{
 		2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
 	};
 
 	public MathOperation(MathOperationOption option)
 	{
+		RandomUpperLimit = 51; // == MathGame.Difficulty.Easy
+
 		rand = new Random(42);
 
 		this.SelectedOption = option;
@@ -65,8 +68,8 @@ class MathOperation
 		}
 
 		this.Answered = false;
-		this.OperandA = rand.Next(0, 101);
-		this.OperandB = rand.Next(1, 101);
+		this.OperandA = rand.Next(0, RandomUpperLimit);
+		this.OperandB = rand.Next(1, RandomUpperLimit);
 		if (this.SelectedOption == MathOperationOption.Division)
 		{
 			if (primes.Contains(this.OperandA))
@@ -81,11 +84,11 @@ class MathOperation
 			{
 				while (this.OperandA % this.OperandB != 0)
 				{
-					this.OperandB = rand.Next(1, 101);
+					this.OperandB = this.rand.Next(1, 101);
 				}
 			}
 		}
-		this.result = this.operation(this.OperandA, this.OperandB);
+		this.result = this.operation!(this.OperandA, this.OperandB);
 	}
 
 	private void SetRandomOperation()
