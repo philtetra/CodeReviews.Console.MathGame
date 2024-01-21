@@ -1,90 +1,73 @@
-﻿using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-
-namespace MathGameApp.Models;
+﻿namespace MathGameApp.Models;
 
 public class MathGame
 {
 	public Func<bool> View { get; private set; }
 	public Difficulty SelectedDifficulty { get; private set; }
+	public MathOperationCollection Operations { get; set; }
 
 	private readonly List<string> examplesHistory = new(32);
 
-	private readonly MathOperation addition;
-	private readonly MathOperation substraction;
-	private readonly MathOperation multiplication;
-	private readonly MathOperation division;
-	private readonly MathOperation randomOperation;
-
 	private string seventhOptionString = string.Empty;
+	private MathOperation currentOperation;
 
 	public MathGame(Difficulty difficulty = Difficulty.Easy)
 	{
 		this.View = ViewMainMenu;
-		this.addition = new MathOperation(MathOperationOption.Addition);
-		this.substraction = new MathOperation(MathOperationOption.Subtraction);
-		this.multiplication = new MathOperation(MathOperationOption.Multiplication);
-		this.division = new MathOperation(MathOperationOption.Division);
-		this.randomOperation = new MathOperation(MathOperationOption.Random);
-
+		this.Operations = new();
+		this.currentOperation = this.Operations.Addition;
 		SetDifficulty(difficulty);
 		this.SelectedDifficulty = difficulty;
 	}
 
 	public void SetDifficulty(Difficulty difficulty)
 	{
-		this.addition.RandomUpperLimit = (int)difficulty;
-		this.substraction.RandomUpperLimit = (int)difficulty;
-		this.multiplication.RandomUpperLimit = (int)difficulty;
-		this.division.RandomUpperLimit = (int)difficulty;
-		this.randomOperation.RandomUpperLimit = (int)difficulty;
+		this.Operations.SetRandomUpperLimits((int)difficulty);
 		this.SelectedDifficulty = difficulty;
 	}
 
-	public void Play(MathOperation operation)
+	public bool Play()
 	{
 		string? answer;
-		do
+		MathOperation operation = this.currentOperation;
+
+		if (operation.Answered)
 		{
-			Console.Clear();
+			operation.GenerateNext();
+		}
+
+		string example = $"{operation.OperandA} {operation.Operator} {operation.OperandB} = ";
+		Console.Write(example);
+		int promptTop = Console.CursorTop, promptLeft = Console.CursorLeft;
+		Console.SetCursorPosition(0, promptTop + 4);
+		Console.WriteLine("'000' to return to the menu");
+		Console.SetCursorPosition(promptLeft, promptTop);
+
+		answer = Console.ReadLine();
+		if (answer == "000")
+		{
+			this.View = ViewMainMenu;
+		}
+		else if (!int.TryParse(answer, out int parsedAnswer))
+		{
+			return false;
+		}
+		else
+		{
+			operation.Answer(parsedAnswer);
+
 			if (operation.Answered)
 			{
-				operation.GenerateNext();
+				this.examplesHistory.Add($"{example}{answer}");
+				Console.WriteLine("Correct!");
+				Console.WriteLine("\nPress any key to continue\nor press '0' to return to the menu");
+				Console.CursorVisible = false;
+				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+				Console.CursorVisible = true;
+				if (keyInfo.Key == ConsoleKey.D0) this.View = ViewMainMenu;
 			}
-
-			string example = $"{operation.OperandA} {operation.Operator} {operation.OperandB} = ";
-			Console.Write(example);
-			int promptTop = Console.CursorTop, promptLeft = Console.CursorLeft;
-			Console.SetCursorPosition(0, promptTop + 4);
-			Console.WriteLine("'000' to return to the menu");
-			Console.SetCursorPosition(promptLeft, promptTop);
-
-			answer = Console.ReadLine();
-			if (answer == "000")
-			{
-				break;
-			}
-			else if (!int.TryParse(answer, out int parsedAnswer))
-			{
-				continue;
-			}
-			else
-			{
-				operation.Answer(parsedAnswer);
-
-				if (operation.Answered)
-				{
-					examplesHistory.Add($"{example}{answer}");
-					Console.WriteLine("Correct!");
-					Console.WriteLine("\nPress any key to continue\nor press '0' to return to the menu");
-					Console.CursorVisible = false;
-					ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-					Console.CursorVisible = true;
-					if (keyInfo.Key == ConsoleKey.D0) break;
-				}
-			}
-
-		} while (true);
+		}
+		return false;
 	}
 
 	public bool ViewMainMenu()
@@ -109,19 +92,24 @@ public class MathGame
 		switch (keyInfo.Key)
 		{
 			case ConsoleKey.D1:
-				Play(addition);
+				this.currentOperation = this.Operations.Addition;
+				this.View = Play;
 				break;
 			case ConsoleKey.D2:
-				Play(substraction);
+				this.currentOperation = this.Operations.Substraction;
+				this.View = Play;
 				break;
 			case ConsoleKey.D3:
-				Play(multiplication);
+				this.currentOperation = this.Operations.Multiplication;
+				this.View = Play;
 				break;
 			case ConsoleKey.D4:
-				Play(division);
+				this.currentOperation = this.Operations.Division;
+				this.View = Play;
 				break;
 			case ConsoleKey.D5:
-				Play(randomOperation);
+				this.currentOperation = this.Operations.Random;
+				this.View = Play;
 				break;
 			case ConsoleKey.D6:
 				ViewHistory();
@@ -240,12 +228,12 @@ public class MathGame
 
 	private static ConsoleColor GetDifficultyColor(Difficulty difficulty) => difficulty switch
 	{
-		 Difficulty.Easy => ConsoleColor.Green,
-		 Difficulty.Medium => ConsoleColor.Yellow,
-		 Difficulty.Hard => ConsoleColor.Magenta,
-		 Difficulty.Calculator => ConsoleColor.Red,
-		 _ => ConsoleColor.Gray
-	 };
+		Difficulty.Easy => ConsoleColor.Green,
+		Difficulty.Medium => ConsoleColor.Yellow,
+		Difficulty.Hard => ConsoleColor.Magenta,
+		Difficulty.Calculator => ConsoleColor.Red,
+		_ => ConsoleColor.Gray
+	};
 
 	public enum Difficulty
 	{

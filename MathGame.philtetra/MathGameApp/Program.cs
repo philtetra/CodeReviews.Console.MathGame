@@ -7,6 +7,13 @@ const string author = "by philtetra";
 do
 {
 	Console.Clear();
+	PrintHeader();
+	quitGame = mathGame.View();
+
+} while (!quitGame);
+
+static void PrintHeader()
+{
 	Console.ForegroundColor = ConsoleColor.White;
 	Console.WriteLine("THE MATH GAME");
 	Console.ForegroundColor = ConsoleColor.Blue;
@@ -14,9 +21,5 @@ do
 	Console.ForegroundColor = ConsoleColor.Blue;
 	Console.WriteLine("================");
 	Console.ForegroundColor = ConsoleColor.Gray;
-
-	quitGame = mathGame.View();
-	//Console.WriteLine($"Buffer - width: {Console.BufferWidth}, height: {Console.BufferHeight}");
-
-} while (!quitGame);
+}
 
