@@ -1,4 +1,6 @@
-﻿namespace MathGameApp.Models;
+﻿using System.Runtime.CompilerServices;
+
+namespace MathGameApp.Models;
 public class MathOperation
 {
 	private Func<int, int, int>? operation;
@@ -6,59 +8,79 @@ public class MathOperation
 	public char Operator { get; private set; }
 	public int OperandA { get; private set; }
 	public int OperandB { get; private set; }
-	private int result;
-	private readonly Random rand;
-	public int RandomUpperLimit;
-	public readonly MathOperationOption SelectedOption;
-	private readonly static List<int> primes = new()
+	public int Result { get; private set; }
+	public static readonly Random NumberGen;
+
+	private MathOperationOption selectedOption;
+	public MathOperationOption SelectedOption
 	{
-		2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
-	};
+		get => selectedOption;
+		set
+		{
+			selectedOption = value;
+			SetOperation(MathOperationOptionToFunctionEnum(value));
+		}
+	}
+
+	private int randomUpperLimit;
+	public int RandomUpperLimit
+	{
+		get => randomUpperLimit;
+		set
+		{
+			if (value > primes[primes.Count - 1])
+			{
+				randomUpperLimit = primes[primes.Count - 1];
+			}
+			else
+			{
+				randomUpperLimit = value;
+			}
+			GenerateNext();
+		}
+	}
+
+	static MathOperation()
+	{
+		int seed = (int)MathF.Abs(DateTime.Now.Ticks / 100);
+		NumberGen = new Random(seed);
+	}
 
 	public MathOperation(MathOperationOption option)
 	{
-		RandomUpperLimit = 51; // == MathGame.Difficulty.Easy
-
-		rand = new Random(42);
+		this.randomUpperLimit = 33; // == MathGame.Difficulty.Easy
 
 		this.SelectedOption = option;
-		switch (this.SelectedOption)
-		{
-			case MathOperationOption.Addition:
-				this.operation = operationsDict[Function.Sum];
-				this.Operator = operatorsDict[Function.Sum];
-				break;
-
-			case MathOperationOption.Subtraction:
-				this.operation = operationsDict[Function.Difference];
-				this.Operator = operatorsDict[Function.Difference];
-				break;
-
-			case MathOperationOption.Multiplication:
-				this.operation = operationsDict[Function.Product];
-				this.Operator = operatorsDict[Function.Product];
-				break;
-
-			case MathOperationOption.Division:
-				this.operation = operationsDict[Function.Quotient];
-				this.Operator = operatorsDict[Function.Quotient];
-				break;
-
-			case MathOperationOption.Random:
-				SetRandomOperation();
-				break;
-		}
-
+		SetOperation(MathOperationOptionToFunctionEnum(option));
 		GenerateNext();
 	}
 
-	public void Answer(int answer)
+	private void SetOperation(FunctionEnum function)
 	{
-		if (answer == this.result)
+		this.operation = operationsDict[function];
+		this.Operator = operatorsDict[function];
+	}
+
+	public static FunctionEnum MathOperationOptionToFunctionEnum(MathOperationOption option)
+	{
+		return option switch
 		{
-			this.Answered = true;
+			MathOperationOption.Addition => FunctionEnum.Sum,
+			MathOperationOption.Subtraction => FunctionEnum.Difference,
+			MathOperationOption.Multiplication => FunctionEnum.Product,
+			MathOperationOption.Division => FunctionEnum.Quotient,
+			_ => getRandomFunctionEnum()// MathOperationOption.Random
+		};
+
+		FunctionEnum getRandomFunctionEnum()
+		{
+			var functionEnumArr = Enum.GetValuesAsUnderlyingType(typeof(FunctionEnum));
+			int index = NumberGen.Next(0, functionEnumArr.Length);
+			return (FunctionEnum)functionEnumArr.GetValue(index)!;
 		}
 	}
+
+	public void Answer(int answer) => this.Answered = answer == this.Result;
 
 	public void GenerateNext()
 	{
@@ -68,13 +90,19 @@ public class MathOperation
 		}
 
 		this.Answered = false;
-		this.OperandA = rand.Next(0, RandomUpperLimit);
-		this.OperandB = rand.Next(1, RandomUpperLimit);
+
+		int lowerLimit = 0;
+		if (this.randomUpperLimit > 64)
+		{
+			lowerLimit = this.randomUpperLimit / 3;
+		}
+		this.OperandA = NumberGen.Next(lowerLimit, this.randomUpperLimit);
+		this.OperandB = NumberGen.Next(lowerLimit + 1, this.randomUpperLimit);
 		if (this.SelectedOption == MathOperationOption.Division)
 		{
 			if (primes.Contains(this.OperandA))
 			{
-				this.OperandB = rand.Next(2) switch
+				this.OperandB = NumberGen.Next(2) switch
 				{
 					0 => this.OperandA,
 					_ => 1
@@ -84,40 +112,64 @@ public class MathOperation
 			{
 				while (this.OperandA % this.OperandB != 0)
 				{
-					this.OperandB = this.rand.Next(1, 101);
+					lowerLimit = this.OperandA == 1 ? 1 : 2;
+					this.OperandB = NumberGen.Next(lowerLimit, this.OperandA);
 				}
 			}
 		}
-		this.result = this.operation!(this.OperandA, this.OperandB);
+		this.Result = this.operation!(this.OperandA, this.OperandB);
 	}
 
 	private void SetRandomOperation()
 	{
-		int index = rand.Next(0, operationsDict.Count);
-		this.operation = operationsDict.ElementAt(index).Value;
-		this.Operator = operatorsDict.ElementAt(index).Value;
+		var randOp = GetRandomOperation(NumberGen);
+		this.operation = randOp.Operation;
+		this.Operator = randOp.Operator;
 	}
 
-	private static readonly Dictionary<Function, Func<int, int, int>> operationsDict = new()
+	private static (Func<int, int, int> Operation, char Operator) GetRandomOperation(Random rand)
 	{
-		[Function.Sum] = Sum,
-		[Function.Difference] = Difference,
-		[Function.Product] = Product,
-		[Function.Quotient] = Quotient
+		int index = rand.Next(0, operationsDict.Count);
+		return (operationsDict.ElementAt(index).Value,
+			operatorsDict.ElementAt(index).Value);
+	}
+
+	private static readonly Dictionary<FunctionEnum, Func<int, int, int>> operationsDict = new()
+	{
+		[FunctionEnum.Sum] = Sum,
+		[FunctionEnum.Difference] = Difference,
+		[FunctionEnum.Product] = Product,
+		[FunctionEnum.Quotient] = Quotient
 	};
-	private static readonly Dictionary<Function, char> operatorsDict = new()
+	private static readonly Dictionary<FunctionEnum, char> operatorsDict = new()
 	{
-		[Function.Sum] = '+',
-		[Function.Difference] = '-',
-		[Function.Product] = '*',
-		[Function.Quotient] = '/'
+		[FunctionEnum.Sum] = '+',
+		[FunctionEnum.Difference] = '-',
+		[FunctionEnum.Product] = '*',
+		[FunctionEnum.Quotient] = '/'
 	};
 	private static int Sum(int a, int b) => a + b;
 	private static int Difference(int a, int b) => a - b;
 	private static int Product(int a, int b) => a * b;
 	private static int Quotient(int a, int b) => a / b;
+	private readonly static List<int> primes = new()
+	{
+		2, 3, 5, 7, 11, 13, 17,
+		19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67,
+		71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+		127, 131, 137, 139, 149, 151, 157, 163, 167, 173,
+		179, 181, 191, 193, 197, 199, 211, 223, 227, 229,
+		233, 239, 241, 251, 257, 263, 269, 271, 277, 281,
+		283, 293, 307, 311, 313, 317, 331, 337, 347, 349,
+		353, 359, 367, 373, 379, 383, 389, 397, 401, 409,
+		419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
+		467, 479, 487, 491, 499, 503, 509, 521, 523, 541,
+		547, 557, 563, 569, 571, 577, 587, 593, 599, 601,
+		607, 613, 617, 619, 631, 641, 643, 647, 653, 659,
+		661
+	};
 
-	private enum Function
+	public enum FunctionEnum
 	{
 		Sum = 1,
 		Difference = 2,

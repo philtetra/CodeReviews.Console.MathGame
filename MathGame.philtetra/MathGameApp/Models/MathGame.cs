@@ -1,12 +1,12 @@
 ﻿namespace MathGameApp.Models;
-
 public class MathGame
 {
 	public Func<bool> View { get; private set; }
 	public Difficulty SelectedDifficulty { get; private set; }
 	public MathOperationCollection Operations { get; set; }
 
-	private readonly List<string> examplesHistory = new(32);
+	//private readonly List<string> examplesHistory = new(32);
+	private readonly List<HistoryRecord> examplesHistory = new(32);
 
 	private string seventhOptionString = string.Empty;
 	private MathOperation currentOperation;
@@ -26,9 +26,17 @@ public class MathGame
 		this.SelectedDifficulty = difficulty;
 	}
 
+	public void PrintDifficultyInfo()
+	{
+		Console.Write("Difficulty: ");
+		Console.ForegroundColor = GetDifficultyColor(this.SelectedDifficulty);
+		Console.WriteLine($"{this.SelectedDifficulty}\n");
+		Console.ForegroundColor = ConsoleColor.Gray;
+	}
+
 	public bool Play()
 	{
-		string? answer;
+		PrintDifficultyInfo();
 		MathOperation operation = this.currentOperation;
 
 		if (operation.Answered)
@@ -38,12 +46,12 @@ public class MathGame
 
 		string example = $"{operation.OperandA} {operation.Operator} {operation.OperandB} = ";
 		Console.Write(example);
-		int promptTop = Console.CursorTop, promptLeft = Console.CursorLeft;
-		Console.SetCursorPosition(0, promptTop + 4);
+		int cursorTop = Console.CursorTop, cursorLeft = Console.CursorLeft;
+		Console.SetCursorPosition(0, cursorTop + 3);
 		Console.WriteLine("'000' to return to the menu");
-		Console.SetCursorPosition(promptLeft, promptTop);
+		Console.SetCursorPosition(cursorLeft, cursorTop);
 
-		answer = Console.ReadLine();
+		string? answer = Console.ReadLine();
 		if (answer == "000")
 		{
 			this.View = ViewMainMenu;
@@ -58,9 +66,12 @@ public class MathGame
 
 			if (operation.Answered)
 			{
-				this.examplesHistory.Add($"{example}{answer}");
-				Console.WriteLine("Correct!");
-				Console.WriteLine("\nPress any key to continue\nor press '0' to return to the menu");
+				this.examplesHistory.Add(new HistoryRecord(operation, this.SelectedDifficulty));
+				//Console.WriteLine("Correct!");
+				Console.SetCursorPosition(cursorLeft + answer.Length, cursorTop);
+				Console.Write('\t');
+				PrintCorrect();
+				Console.WriteLine("\n\nPress any key to continue\nor press '0' to return to the menu");
 				Console.CursorVisible = false;
 				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
 				Console.CursorVisible = true;
@@ -70,12 +81,30 @@ public class MathGame
 		return false;
 	}
 
+	private void PrintCorrect()
+	{
+		Console.ForegroundColor = ConsoleColor.Green;
+		Console.Write('C');
+		Console.ForegroundColor = ConsoleColor.White;
+		Console.Write('O');
+		Console.ForegroundColor = ConsoleColor.Yellow;
+		Console.Write('R');
+		Console.ForegroundColor = ConsoleColor.Red;
+		Console.Write('E');
+		Console.ForegroundColor = ConsoleColor.Blue;
+		Console.Write('C');
+		Console.ForegroundColor = ConsoleColor.White;
+		Console.Write('C');
+		Console.ForegroundColor = ConsoleColor.Cyan;
+		Console.Write('T');
+		Console.ForegroundColor = ConsoleColor.Green;
+		Console.Write('!');
+		Console.ForegroundColor = ConsoleColor.Gray;
+	}
+
 	public bool ViewMainMenu()
 	{
-		Console.Write("Difficulty: ");
-		Console.ForegroundColor = GetDifficultyColor(this.SelectedDifficulty);
-		Console.WriteLine($"{this.SelectedDifficulty}\n");
-		Console.ForegroundColor = ConsoleColor.Gray;
+		PrintDifficultyInfo();
 		for (int i = 1; i <= Enum.GetNames(typeof(MathOperationOption)).Length; i++)
 		{
 			Console.WriteLine($"{i}. {Enum.GetName(typeof(MathOperationOption), i)}");
@@ -182,15 +211,18 @@ public class MathGame
 		Console.CursorVisible = false;
 		if (this.examplesHistory.Count != 0)
 		{
-			Console.SetCursorPosition(columnWidth * indents, 0);
+			Console.SetCursorPosition(columnWidth * 3, 0);
 			Console.WriteLine("Press '1' to erase the history");
 		}
+		string tooltip = "( 'R' - Random mode )";
+		Console.SetCursorPosition(columnWidth * indents, 0);
+		Console.Write(tooltip);
 		Console.SetCursorPosition(Console.WindowWidth / 2, 0);
 		Console.WriteLine("History");
 		Console.CursorLeft = Console.WindowWidth / 2;
 		Console.WriteLine("=======");
 
-		foreach (string record in examplesHistory)
+		foreach (HistoryRecord record in examplesHistory)
 		{
 			if (++counter + 2 >= Console.BufferHeight)
 			{
@@ -203,7 +235,8 @@ public class MathGame
 				break;
 			}
 			Console.CursorLeft = columnWidth * indents;
-			Console.WriteLine(record);
+			//Console.WriteLine(record);
+			record.Print();
 		}
 		ConsoleKeyInfo keyInfo = Console.ReadKey();
 		if (keyInfo.Key == ConsoleKey.D1 && this.examplesHistory.Count != 0)
@@ -218,15 +251,23 @@ public class MathGame
 
 	public void FillHistoryWithSampleData(int count)
 	{
-		this.seventhOptionString = "(Sample data generated)";
-		string sample = "33 * 100 = 3300";
+		var mathOp = new MathOperation(MathOperationOption.Random);
+		var difficultiesEnumArr = Enum.GetValuesAsUnderlyingType(typeof(Difficulty));
+		var mathOpOptionsEnumArr = Enum.GetValuesAsUnderlyingType(typeof(MathOperationOption));
 		for (int i = 0; i < count; i++)
 		{
-			examplesHistory.Add(sample);
+			int index = MathOperation.NumberGen.Next(0, difficultiesEnumArr.Length);
+			Difficulty difficulty = (Difficulty)difficultiesEnumArr.GetValue(index)!;
+			index = MathOperation.NumberGen.Next(0, mathOpOptionsEnumArr.Length);
+			MathOperationOption mathOpOption = (MathOperationOption)mathOpOptionsEnumArr.GetValue(index)!;
+			mathOp.SelectedOption = mathOpOption;
+			mathOp.GenerateNext();
+			examplesHistory.Add(new HistoryRecord(mathOp, difficulty));
 		}
+		this.seventhOptionString = "(Sample data generated)";
 	}
 
-	private static ConsoleColor GetDifficultyColor(Difficulty difficulty) => difficulty switch
+	public static ConsoleColor GetDifficultyColor(Difficulty difficulty) => difficulty switch
 	{
 		Difficulty.Easy => ConsoleColor.Green,
 		Difficulty.Medium => ConsoleColor.Yellow,
@@ -237,9 +278,9 @@ public class MathGame
 
 	public enum Difficulty
 	{
-		Easy = 51,
-		Medium = 101,
-		Hard = 200,
-		Calculator = 500
+		Easy = 33,
+		Medium = 97,
+		Hard = 193,
+		Calculator = 667
 	}
 }

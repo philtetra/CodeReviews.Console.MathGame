@@ -1,8 +1,4 @@
-﻿
-using static MathGameApp.Models.MathGame;
-
-namespace MathGameApp.Models;
-
+﻿namespace MathGameApp.Models;
 public class MathOperationCollection
 {
 	public readonly MathOperation Addition;

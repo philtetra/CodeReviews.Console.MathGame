@@ -22,4 +22,3 @@ static void PrintHeader()
 	Console.WriteLine("================");
 	Console.ForegroundColor = ConsoleColor.Gray;
 }
-
