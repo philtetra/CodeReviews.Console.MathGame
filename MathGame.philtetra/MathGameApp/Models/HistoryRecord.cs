@@ -1,7 +1,4 @@
-﻿using System.Text;
-
-namespace MathGameApp.Models;
-
+﻿namespace MathGameApp.Models;
 public struct HistoryRecord
 {
 	public int a;
